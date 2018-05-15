@@ -54,10 +54,13 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
       },
       lockToContainerEdges: false,
       lockOffset: '50%',
-      getHelperDimensions: ({node}) => ({
-        width: node.offsetWidth,
-        height: node.offsetHeight,
-      }),
+      getHelperDimensions: ({node}) => {
+        const header = node.querySelector('header');
+        return {
+          width: header.offsetWidth,
+          height: header.offsetHeight,
+        }
+      }
     };
 
     static propTypes = {

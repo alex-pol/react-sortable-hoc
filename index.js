@@ -5,7 +5,9 @@ import {SortableContainer, SortableElement, arrayMove} from './src/index';
 import range from 'lodash/range';
 import random from 'lodash/random';
 
-const SortableItem = SortableElement(({height, value}) => (
+
+
+const Item = (({height, value}) => (
     <div style={{
         position: 'relative',
         width: '100%',
@@ -15,11 +17,12 @@ const SortableItem = SortableElement(({height, value}) => (
         borderBottom: '1px solid #EFEFEF',
         boxSizing: 'border-box',
         WebkitUserSelect: 'none',
-        height: height
     }}>
         Item {value}
     </div>
 ));
+
+const SortableItem = SortableElement(Item);
 
 const SortableList = SortableContainer(({items}) => (
     <div style={{
