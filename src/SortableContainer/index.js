@@ -55,10 +55,10 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
       lockToContainerEdges: false,
       lockOffset: '50%',
       getHelperDimensions: ({node}) => {
-        const header = node.querySelector('header');
+        const handler = node.classList.contains('handler') ? node : node.querySelector('.handler');
         return {
-          width: header.offsetWidth,
-          height: header.offsetHeight,
+          width: handler.offsetWidth,
+          height: handler.offsetHeight,
         }
       }
     };
