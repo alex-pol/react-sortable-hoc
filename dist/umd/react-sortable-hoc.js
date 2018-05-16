@@ -1509,10 +1509,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	    getHelperDimensions: function getHelperDimensions(_ref) {
 	      var node = _ref.node;
 
-	      var header = node.querySelector('header');
+	      var handler = node.classList.contains('handler') ? node : node.querySelector('.handler');
 	      return {
-	        width: header.offsetWidth,
-	        height: header.offsetHeight
+	        width: handler.offsetWidth,
+	        height: handler.offsetHeight
 	      };
 	    }
 	  }, _class.propTypes = {
