@@ -72,6 +72,7 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
       contentWindow: PropTypes.any,
       onSortStart: PropTypes.func,
       onSortMove: PropTypes.func,
+      onSortOver: PropTypes.func,
       onSortEnd: PropTypes.func,
       shouldCancelStart: PropTypes.func,
       pressDelay: PropTypes.number,
@@ -111,18 +112,20 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
        *  snapshots will serialize window, causing a RangeError
        *  https://github.com/clauderic/react-sortable-hoc/issues/249
        */
-      const contentWindow = this.props.contentWindow || window;
 
       this.container = typeof getContainer === 'function'
         ? getContainer(this.getWrappedInstance())
         : findDOMNode(this);
       this.document = this.container.ownerDocument || document;
-      this.scrollContainer = useWindowAsScrollContainer
-        ? this.document.body
-        : this.container;
+
+      const contentWindow = this.props.contentWindow || this.document.defaultView || window;
+
       this.contentWindow = typeof contentWindow === 'function'
         ? contentWindow()
         : contentWindow;
+      this.scrollContainer = useWindowAsScrollContainer
+        ? this.document.scrollingElement || this.document.documentElement
+        : this.container;
 
       for (const key in this.events) {
         if (this.events.hasOwnProperty(key)) {
@@ -134,11 +137,13 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
     }
 
     componentWillUnmount() {
-      for (const key in this.events) {
-        if (this.events.hasOwnProperty(key)) {
-          events[key].forEach(eventName =>
-            this.container.removeEventListener(eventName, this.events[key])
-          );
+      if (this.container) {
+        for (const key in this.events) {
+          if (this.events.hasOwnProperty(key)) {
+            events[key].forEach(eventName =>
+              this.container.removeEventListener(eventName, this.events[key])
+            );
+          }
         }
       }
     }
@@ -275,8 +280,8 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
         this.offsetEdge = this.getEdgeOffset(node);
         this.initialOffset = this.getOffset(e);
         this.initialScroll = {
-          top: this.scrollContainer.scrollTop,
-          left: this.scrollContainer.scrollLeft,
+          top: this.container.scrollTop,
+          left: this.container.scrollLeft,
         };
 
         this.initialWindowScroll = {
@@ -455,10 +460,22 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
     }
 
     getOffset(e) {
-      return {
-        x: e.touches ? e.touches[0].pageX : e.pageX,
-        y: e.touches ? e.touches[0].pageY : e.pageY,
-      };
+      if (e.touches && e.touches.length) {
+        return {
+          x: e.touches[0].pageX,
+          y: e.touches[0].pageY,
+        };
+      } else if (e.changedTouches && e.changedTouches.length) {
+        return {
+          x: e.changedTouches[0].pageX,
+          y: e.changedTouches[0].pageY,
+        };
+      } else {
+        return {
+          x: e.pageX,
+          y: e.pageY,
+        };
+      }
     }
 
     getLockPixelOffsets() {
@@ -568,20 +585,21 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
     }
 
     animateNodes() {
-      const {transitionDuration, hideSortableGhost} = this.props;
+      const {transitionDuration, hideSortableGhost, onSortOver} = this.props;
       const nodes = this.manager.getOrderedRefs();
-      const deltaScroll = {
-        left: this.scrollContainer.scrollLeft - this.initialScroll.left,
-        top: this.scrollContainer.scrollTop - this.initialScroll.top,
+      const containerScrollDelta = {
+        left: this.container.scrollLeft - this.initialScroll.left,
+        top: this.container.scrollTop - this.initialScroll.top,
       };
       const sortingOffset = {
-        left: this.offsetEdge.left + this.translate.x + deltaScroll.left,
-        top: this.offsetEdge.top + this.translate.y + deltaScroll.top,
+        left: this.offsetEdge.left + this.translate.x + containerScrollDelta.left,
+        top: this.offsetEdge.top + this.translate.y + containerScrollDelta.top,
       };
-      const scrollDifference = {
+      const windowScrollDelta = {
         top: (window.pageYOffset - this.initialWindowScroll.top),
         left: (window.pageXOffset - this.initialWindowScroll.left),
       };
+      const prevIndex = this.newIndex;
       this.newIndex = null;
 
       for (let i = 0, len = nodes.length; i < len; i++) {
@@ -642,9 +660,9 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
             if (
               index < this.index &&
               (
-                ((sortingOffset.left + scrollDifference.left) - offset.width <= edgeOffset.left &&
-                (sortingOffset.top + scrollDifference.top) <= edgeOffset.top + offset.height) ||
-                (sortingOffset.top + scrollDifference.top) + offset.height <= edgeOffset.top
+                ((sortingOffset.left + windowScrollDelta.left) - offset.width <= edgeOffset.left &&
+                (sortingOffset.top + windowScrollDelta.top) <= edgeOffset.top + offset.height) ||
+                (sortingOffset.top + windowScrollDelta.top) + offset.height <= edgeOffset.top
               )
             ) {
               // If the current node is to the left on the same row, or above the node that's being dragged
@@ -666,9 +684,9 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
             } else if (
               index > this.index &&
               (
-                ((sortingOffset.left + scrollDifference.left) + offset.width >= edgeOffset.left &&
-                (sortingOffset.top + scrollDifference.top) + offset.height >= edgeOffset.top) ||
-                (sortingOffset.top + scrollDifference.top) + offset.height >= edgeOffset.top + height
+                ((sortingOffset.left + windowScrollDelta.left) + offset.width >= edgeOffset.left &&
+                (sortingOffset.top + windowScrollDelta.top) + offset.height >= edgeOffset.top) ||
+                (sortingOffset.top + windowScrollDelta.top) + offset.height >= edgeOffset.top + height
               )
             ) {
               // If the current node is to the right on the same row, or below the node that's being dragged
@@ -689,13 +707,13 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
           } else {
             if (
               index > this.index &&
-              (sortingOffset.left + scrollDifference.left) + offset.width >= edgeOffset.left
+              (sortingOffset.left + windowScrollDelta.left) + offset.width >= edgeOffset.left
             ) {
               translate.x = -(this.width + this.marginOffset.x);
               this.newIndex = index;
             } else if (
               index < this.index &&
-              (sortingOffset.left + scrollDifference.left) <= edgeOffset.left + offset.width
+              (sortingOffset.left + windowScrollDelta.left) <= edgeOffset.left + offset.width
             ) {
               translate.x = this.width + this.marginOffset.x;
               if (this.newIndex == null) {
@@ -706,13 +724,13 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
         } else if (this.axis.y) {
           if (
             index > this.index &&
-            (sortingOffset.top + scrollDifference.top) + offset.height >= edgeOffset.top
+            (sortingOffset.top + windowScrollDelta.top) + offset.height >= edgeOffset.top
           ) {
             translate.y = -(this.height + this.marginOffset.y);
             this.newIndex = index;
           } else if (
             index < this.index &&
-            (sortingOffset.top + scrollDifference.top) <= edgeOffset.top + offset.height
+            (sortingOffset.top + windowScrollDelta.top) <= edgeOffset.top + offset.height
           ) {
             translate.y = this.height + this.marginOffset.y;
             if (this.newIndex == null) {
@@ -725,6 +743,15 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
 
       if (this.newIndex == null) {
         this.newIndex = this.index;
+      }
+
+      if (onSortOver && this.newIndex !== prevIndex) {
+        onSortOver({
+          newIndex: this.newIndex,
+          oldIndex: prevIndex,
+          index: this.index,
+          collection: this.manager.active.collection,
+        });
       }
     }
 
