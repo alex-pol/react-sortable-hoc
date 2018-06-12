@@ -3,12 +3,24 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.vendorPrefix = exports.events = undefined;
 exports.arrayMove = arrayMove;
 exports.omit = omit;
 exports.closest = closest;
 exports.limit = limit;
 exports.getElementMargin = getElementMargin;
 exports.provideDisplayName = provideDisplayName;
+exports.getPosition = getPosition;
+exports.isTouchEvent = isTouchEvent;
+exports.getEdgeOffset = getEdgeOffset;
+exports.getLockPixelOffset = getLockPixelOffset;
+
+var _invariant = require('invariant');
+
+var _invariant2 = _interopRequireDefault(_invariant);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 function arrayMove(arr, previousIndex, newIndex) {
   var array = arr.slice(0);
   if (newIndex >= array.length) {
@@ -94,4 +106,76 @@ function provideDisplayName(prefix, Component) {
   var componentName = Component.displayName || Component.name;
 
   return componentName ? prefix + '(' + componentName + ')' : prefix;
+}
+
+function getPosition(event) {
+  if (event.touches && event.touches.length) {
+    return {
+      x: event.touches[0].pageX,
+      y: event.touches[0].pageY
+    };
+  } else if (event.changedTouches && event.changedTouches.length) {
+    return {
+      x: event.changedTouches[0].pageX,
+      y: event.changedTouches[0].pageY
+    };
+  } else {
+    return {
+      x: event.pageX,
+      y: event.pageY
+    };
+  }
+}
+
+function isTouchEvent(event) {
+  return event.touches && event.touches.length || event.changedTouches && event.changedTouches.length;
+}
+
+function getEdgeOffset(node, parent) {
+  var offset = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : { top: 0, left: 0 };
+
+  // Get the actual offsetTop / offsetLeft value, no matter how deep the node is nested
+  if (node) {
+    var nodeOffset = {
+      top: offset.top + node.offsetTop,
+      left: offset.left + node.offsetLeft
+    };
+
+    if (node.parentNode !== parent) {
+      return getEdgeOffset(node.parentNode, parent, nodeOffset);
+    } else {
+      return nodeOffset;
+    }
+  }
+}
+
+function getLockPixelOffset(_ref) {
+  var lockOffset = _ref.lockOffset,
+      width = _ref.width,
+      height = _ref.height;
+
+  var offsetX = lockOffset;
+  var offsetY = lockOffset;
+  var unit = 'px';
+
+  if (typeof lockOffset === 'string') {
+    var match = /^[+-]?\d*(?:\.\d*)?(px|%)$/.exec(lockOffset);
+
+    (0, _invariant2.default)(match !== null, 'lockOffset value should be a number or a string of a ' + 'number followed by "px" or "%". Given %s', lockOffset);
+
+    offsetX = offsetY = parseFloat(lockOffset);
+    unit = match[1];
+  }
+
+  (0, _invariant2.default)(isFinite(offsetX) && isFinite(offsetY), 'lockOffset value should be a finite. Given %s', lockOffset);
+
+  if (unit === '%') {
+    offsetX = offsetX * width / 100;
+    offsetY = offsetY * height / 100;
+  }
+
+  return {
+    x: offsetX,
+    y: offsetY
+  };
 }

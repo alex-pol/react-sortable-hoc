@@ -1,4 +1,6 @@
 import _Object$keys from 'babel-runtime/core-js/object/keys';
+import invariant from 'invariant';
+
 export function arrayMove(arr, previousIndex, newIndex) {
   var array = arr.slice(0);
   if (newIndex >= array.length) {
@@ -84,4 +86,76 @@ export function provideDisplayName(prefix, Component) {
   var componentName = Component.displayName || Component.name;
 
   return componentName ? prefix + '(' + componentName + ')' : prefix;
+}
+
+export function getPosition(event) {
+  if (event.touches && event.touches.length) {
+    return {
+      x: event.touches[0].pageX,
+      y: event.touches[0].pageY
+    };
+  } else if (event.changedTouches && event.changedTouches.length) {
+    return {
+      x: event.changedTouches[0].pageX,
+      y: event.changedTouches[0].pageY
+    };
+  } else {
+    return {
+      x: event.pageX,
+      y: event.pageY
+    };
+  }
+}
+
+export function isTouchEvent(event) {
+  return event.touches && event.touches.length || event.changedTouches && event.changedTouches.length;
+}
+
+export function getEdgeOffset(node, parent) {
+  var offset = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : { top: 0, left: 0 };
+
+  // Get the actual offsetTop / offsetLeft value, no matter how deep the node is nested
+  if (node) {
+    var nodeOffset = {
+      top: offset.top + node.offsetTop,
+      left: offset.left + node.offsetLeft
+    };
+
+    if (node.parentNode !== parent) {
+      return getEdgeOffset(node.parentNode, parent, nodeOffset);
+    } else {
+      return nodeOffset;
+    }
+  }
+}
+
+export function getLockPixelOffset(_ref) {
+  var lockOffset = _ref.lockOffset,
+      width = _ref.width,
+      height = _ref.height;
+
+  var offsetX = lockOffset;
+  var offsetY = lockOffset;
+  var unit = 'px';
+
+  if (typeof lockOffset === 'string') {
+    var match = /^[+-]?\d*(?:\.\d*)?(px|%)$/.exec(lockOffset);
+
+    invariant(match !== null, 'lockOffset value should be a number or a string of a ' + 'number followed by "px" or "%". Given %s', lockOffset);
+
+    offsetX = offsetY = parseFloat(lockOffset);
+    unit = match[1];
+  }
+
+  invariant(isFinite(offsetX) && isFinite(offsetY), 'lockOffset value should be a finite. Given %s', lockOffset);
+
+  if (unit === '%') {
+    offsetX = offsetX * width / 100;
+    offsetY = offsetY * height / 100;
+  }
+
+  return {
+    x: offsetX,
+    y: offsetY
+  };
 }
