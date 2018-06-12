@@ -1,5 +1,21 @@
 Changelog
 ------------
+### 0.8.3
+- Fix: TouchEvent is undefined in certain browsers, such as Safari [#382](https://github.com/clauderic/react-sortable-hoc/issues/382)
+
+### 0.8.1
+- Fix scrolling issues on mobile with anchor tag elements [#380](https://github.com/clauderic/react-sortable-hoc/pull/380)
+- Update TypeScript type definition for ContainerGetter to accept Promises that return HTMLElements
+
+### 0.8.0
+- Allow `getContainer` to return a promise. This is useful when the container node is rendered by a parent component, since `componentDidMount` fires backwards (from child to parent) [#155](https://github.com/clauderic/react-sortable-hoc/pull/155/)
+
+### 0.7.4
+- Fix typo in getLockPixelOffset helper
+
+### 0.7.3
+- Fix issues with distance and pressThreshold props on mobile [#378](https://github.com/clauderic/react-sortable-hoc/pull/378)
+
 ### 0.7.2
 - Fix issues with TypeScript type definitions
 
